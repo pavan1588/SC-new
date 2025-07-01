@@ -1,8 +1,20 @@
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 import openai
 import os
 
 app = FastAPI()
+
+# ✅ CORS FIX
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.get("/")
 def root():
@@ -13,23 +25,12 @@ async def analyze_scene(request: Request):
     body = await request.json()
     scene_text = body.get("scene_text", "")
 
-    prompt = f"""Analyze the following movie scene in terms of:
-1. Beat Structure
-2. Emotional Arc
-3. Scene Tone and Genre
-4. Character Motivation
-5. Realism Score
-6. Subtext vs. Spoken Intent
-
-Scene:
-{scene_text}
-"""
-
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-
     response = openai.ChatCompletion.create(
         model="gpt-4",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{
+            "role": "user",
+            "content": f"Analyze this movie scene for narrative beats, tone, emotion and cinematic structure:\n{scene_text}"
+        }]
     )
 
-    return {"analysis": response.choices[0].message["content"]}
+    return {"analysis": response.choices[0].message.content}
